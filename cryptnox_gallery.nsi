@@ -29,6 +29,7 @@ SetCompressor lzma
 !insertmacro MUI_PAGE_INSTFILES
 ; Finish page
 !define MUI_FINISHPAGE_RUN "$INSTDIR\cryptnox_gallery.exe"
+!define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\README.md"
 !insertmacro MUI_PAGE_FINISH
 
 ; Uninstaller pages
@@ -218,6 +219,8 @@ Section "MainSection" SEC01
   File "dist\cryptnox_gallery\_socket.pyd"
   File "dist\cryptnox_gallery\_ssl.pyd"
   File "dist\cryptnox_gallery\_uuid.pyd"
+  SetOverwrite ifnewer
+  File "README.md"
 SectionEnd
 
 Section -AdditionalIcons
@@ -248,6 +251,7 @@ FunctionEnd
 
 Section Uninstall
   Delete "$INSTDIR\uninst.exe"
+  Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\_uuid.pyd"
   Delete "$INSTDIR\_ssl.pyd"
   Delete "$INSTDIR\_socket.pyd"
