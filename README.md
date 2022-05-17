@@ -14,3 +14,8 @@ The application starts in full-screen mode which can be toggled with the "F" key
 Detection of card removal from reader triggers an expiry timer where the display of existing NFT is automatically stopped in 30 mins, returning to the main screen, while leaving the card in the reader will have the NFT on display indefinitely. <br> <br>
 In order to manually stop NFT display, the app allows users to place/tap the same card which brings them back to the main screen.
 Placing/Tapping a new card will also immediately stop the current display and loads the newly detected NFT on screen.
+
+### Loading NFT cards
+The application presumes cards have been initialized with NFTs, which can be done via:<br>
+* [Cryptnoxpro (CLI)](https://github.com/Cryptnox-Software/cryptnoxpro), or
+* [Cryptnox NFT Manager (GUI)](https://github.com/Cryptnox-Software/Cryptnox-NFT-Manager)
