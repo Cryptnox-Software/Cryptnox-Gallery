@@ -376,7 +376,10 @@ class GalleryApp(wx.App):
 
     def __init__(self):
         super(GalleryApp, self).__init__()
-        self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
+        try:
+            self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
+        except:
+            self.locale.setlocale(wx.locale.LC_ALL,('en_US','UTF-8'))
         self.frame = wx.Frame(None, -1, "Crytpnox Gallery")
         self.panel = Panel(self.frame, -1)
         self.frame.Show(1)
