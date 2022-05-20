@@ -9,6 +9,8 @@ wxpython = "*"
 pillow = "*"
 requests = "*"
 pyinstaller = "*"
+filetype = "*"
+pypubsub = "*"
 
 [dev-packages]
 

@@ -10,7 +10,7 @@ import requests
 import wx
 from wx._adv import Animation, AnimationCtrl
 from wx import media
-from wx.lib.pubsub import pub
+from pubsub import pub
 import time
 import random
 from arc_gauge import ArcGauge
