@@ -27,7 +27,7 @@ def url(metadata):
             return metadata_json['image']
         except KeyError:
             try:
-                return f"https://cf-ipfs.com/ipfs/{metadata_json['image_url'].split('/')[-2]}/{metadata_json['image_url'].split('/')[-1]}"
+                return f"https://opengateway.mypinata.cloud/ipfs/{metadata_json['image_url'].split('/')[-2]}/{metadata_json['image_url'].split('/')[-1]}"
             except (KeyError, IndexError):
                 pass
 

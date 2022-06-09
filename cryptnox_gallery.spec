@@ -8,7 +8,7 @@ a = Analysis(
     ['cryptnox_gallery\\main.py'],
     pathex=[],
     binaries=[],
-    datas=[('cryptnox_gallery\\arc_gauge.py', '.'), ('cryptnox_gallery\\cryptnox_transparent.png', '.')],
+    datas=[('.\\cryptnox_gallery\\*', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
