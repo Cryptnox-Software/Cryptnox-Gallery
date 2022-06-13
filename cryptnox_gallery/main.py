@@ -15,6 +15,7 @@ import time
 import random
 from arc_gauge import ArcGauge
 from datetime import datetime,timedelta
+from sys import getsizeof
 
 def url(metadata):
     try:
@@ -24,7 +25,7 @@ def url(metadata):
         return
     else:
         try:
-            return metadata_json['image']
+            return f"https://opengateway.mypinata.cloud/ipfs/{metadata_json['image'].split('//')[-1]}"
         except KeyError:
             try:
                 return f"https://opengateway.mypinata.cloud/ipfs/{metadata_json['image_url'].split('/')[-2]}/{metadata_json['image_url'].split('/')[-1]}"
@@ -74,6 +75,7 @@ class ScaleImageThread(Thread):
 class Panel(wx.Panel):
     def __init__(self, parent, id):
         wx.Panel.__init__(self, parent, id)
+        self.cache = {}
         self.SetBackgroundColour('black')
         self.SetForegroundColour('white')
         self.image = None
@@ -114,7 +116,6 @@ class Panel(wx.Panel):
     
     def reset_to_main(self,text='Application ready',serial=False):
         self.text.SetLabel(text)
-        # self.Layout()
         if self.animating:
             self.anim.Stop()
             self.animating = False
@@ -163,23 +164,45 @@ class Panel(wx.Panel):
         time.sleep(wait)
         self._serial = None
 
+    def display_cached_nft(self,card_serial):
+        wx.CallAfter(pub.sendMessage, "downloaded", data=self.cache[card_serial]['data'],cache=False)
+
+    def check_cached(self,card_serial,image_url):
+        print(self.cache.keys())
+        if card_serial in self.cache.keys():
+            print(self.cache[card_serial]['image_url'])
+            if self.cache[card_serial]['image_url'] == image_url:
+                self.display_cached_nft(card_serial)
+                return True
+        print('No cache')
+        return False
+
     def set_nft(self):
         try:
             connection = cryptnoxpy.Connection()
             card = cryptnoxpy.factory.get_card(connection)
             if card.type == ord("N") and self._serial != card.serial_number:
                 print(f'--{datetime.now().strftime("%H:%M:%S")}--New card detected {card.serial_number}')
+                try:
+                    card.check_init()
+                except Exception as e:
+                    self.text.SetLabel('Uninitialized card found')
+                    raise Exception('Uninitialized card found')
                 self.card_inserted = True
                 if self.display_state:
                     self.reset_to_main("Card found, Loading")
                 self._serial = card.serial_number
                 image_url = url(gzip.decompress(card.user_data[3]))
-                header = requests.head(image_url)
-                self.file_size = int(int(header.headers["content-length"]) / 1024)
-                self.gauge.setRange(0,self.file_size)
-                self.gauge.Show()
-                self.Layout()
-                DownloadThread(self,image_url, self.file_size)
+                print(image_url)
+                cache_exists = self.check_cached(card.serial_number,image_url)
+
+                if not cache_exists:
+                    header = requests.head(image_url)
+                    self.file_size = int(int(header.headers["content-length"]) / 1024)
+                    self.gauge.setRange(0,self.file_size)
+                    self.gauge.Show()
+                    self.Layout()
+                    DownloadThread(self,image_url, self.file_size)
             elif card.type == ord("N") and self._serial == card.serial_number:
                 print("Same card detected")
                 if not self.card_inserted:
@@ -191,6 +214,7 @@ class Panel(wx.Panel):
                 print('Connection issue or No card, passed')
             elif 'no card' in str(e):
                 print(f'Ejected: {e}')
+                self.text.SetLabel('No Card Inserted')
                 self.card_inserted = False
                 NFT_Expiration_Timer(self)
             elif 'Invalid URL' in str(e):
@@ -231,7 +255,21 @@ class Panel(wx.Panel):
         self.gauge.setText=f"{progress}%"
         # self.text.SetLabel(f"Card found. Loading {round(progress,2)}%")
 
-    def downloaded(self, data):
+    def cache_data(self,card_serial,data,url):
+        self.check_cache_size()
+        self.cache[card_serial] = {'image_url':url,'data':data}
+
+
+    def check_cache_size(self):
+        cache = self.cache
+        cache_size = getsizeof(cache)/1000000
+        print(f'Cached data size: {cache_size}')
+        if cache_size >= 1:
+            del cache[list(cache.keys())[0]]
+
+    def downloaded(self, data,url=None,cache = True):
+        if cache:
+            self.cache_data(self._serial,data,url)
         try:
             file_type = filetype.guess(data).mime
             if not file_type.startswith('image'):
@@ -307,7 +345,7 @@ class DownloadThread(Thread):
                     self.panel.gauge.setValue(total_size/1024)
                     wx.CallAfter(pub.sendMessage, "update")
             self.panel.gauge.setValue(0)
-            wx.CallAfter(pub.sendMessage, "downloaded", data=self.data)
+            wx.CallAfter(pub.sendMessage, "downloaded", data=self.data,url = self.url)
         except Exception as e:
             print(f'Exception in downloading: {e}')
             RetryThread(self.panel)
