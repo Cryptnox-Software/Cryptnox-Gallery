@@ -25,7 +25,10 @@ def url(metadata):
         return
     else:
         try:
-            return f"https://opengateway.mypinata.cloud/ipfs/{metadata_json['image'].split('//')[-1]}"
+            if 'ipfs' in metadata_json['image'].lower():
+                return f"https://opengateway.mypinata.cloud/ipfs/{metadata_json['image'].split('//')[-1]}"
+            else:
+                return metadata_json['image']
         except KeyError:
             try:
                 return f"https://opengateway.mypinata.cloud/ipfs/{metadata_json['image_url'].split('/')[-2]}/{metadata_json['image_url'].split('/')[-1]}"
@@ -191,6 +194,7 @@ class Panel(wx.Panel):
                 self.card_inserted = True
                 if self.display_state:
                     self.reset_to_main("Card found, Loading")
+                self.text.SetLabel("Card found, Loading")
                 self._serial = card.serial_number
                 image_url = url(gzip.decompress(card.user_data[3]))
                 print(image_url)
@@ -272,11 +276,12 @@ class Panel(wx.Panel):
             self.cache_data(self._serial,data,url)
         try:
             file_type = filetype.guess(data).mime
-            if not file_type.startswith('image'):
+            print(file_type)
+            if not file_type.startswith('image') and file_type != 'video/mp4':
                 self.text.SetLabel("File format not recognized. Can't display.")
                 return
-            if file_type.endswith('gif'):
-                self._set_animation(data)
+            if file_type.endswith('gif') or file_type == 'video/mp4':
+                self._set_animation(data,file_type=='video/mp4')
                 self.display_state = True
                 self.animating = True
             else:
@@ -292,20 +297,31 @@ class Panel(wx.Panel):
             RetryThread(self)
         
 
-    def _set_animation(self, data):
-        ft = tempfile.NamedTemporaryFile(delete=False, suffix=".gif")
+    def _set_animation(self, data,mp4=False):
+        print('Setting animation')
+        if mp4:
+            ft = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        else:
+            ft = tempfile.NamedTemporaryFile(delete=False, suffix=".gif")
         ft.write(data)
         ft.flush()
         ft.close()
-        anim = Animation(ft.name)
+        print(f'FileName:{ft.name}')
         panel_width = self.Size[0]
         panel_height = self.Size[1]
-        target_width, target_height = size(anim.Size[0], anim.Size[1], self.Size[0], self.Size[1])
-        start_height = int((panel_height - target_height) / 2)
-        start_width = int((panel_width - target_width) / 2)
+        if mp4:
+            anim = ft.name
+            target_width, target_height = size(750, 750, panel_width, panel_height)
+            start_height = int((panel_height - target_height) / 2)
+            start_width = int((panel_width - target_width) / 2)
+            self.anim = media.MediaCtrl(self,-1,style=wx.SIMPLE_BORDER,pos=(start_width,start_height), size=(target_width,target_height),szBackend=wx.media.MEDIABACKEND_WMP10)
+        else:
+            anim = Animation(ft.name)
+            target_width, target_height = size(anim.Size[0], anim.Size[1], self.Size[0], self.Size[1])
+            start_height = int((panel_height - target_height) / 2)
+            start_width = int((panel_width - target_width) / 2)
+            self.anim = media.MediaCtrl(self,-1,style=wx.SIMPLE_BORDER,pos=(start_width,start_height), size=(target_width,target_height))
         self.main.Clear(1)
-        self.anim = media.MediaCtrl(self,-1,style=wx.SIMPLE_BORDER,pos=(start_width,start_height), size=(target_width,target_height))
-        # self.anim.Bind(media.EVT_MEDIA_STOP, self.on_media_stop)
         self.anim.Bind(media.EVT_MEDIA_LOADED, self.on_media_loaded)
         self.anim.Bind(media.EVT_MEDIA_FINISHED,self.on_media_finished)
         self.anim.Load(ft.name)
